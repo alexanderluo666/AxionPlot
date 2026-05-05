@@ -3,28 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <title>AxionPlot</title>
-
 <link rel="stylesheet" href="style.css">
 
 <link rel="icon" href="data:image/svg+xml,
 <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>
 <circle cx='50' cy='50' r='45' fill='black'/>
-<circle cx='50' cy='50' r='20' fill='%2300ffcc'/>
+<circle cx='50' cy='50' r='15' fill='%2300ffcc'/>
 </svg>">
 </head>
 
 <body>
 
-<div id="ui">
-    <div class="title">AXIONPLOT</div>
-
-    <input id="expr" placeholder="e.g. x*x, sin(x), x^2">
-    <button onclick="addGraph()">ADD</button>
+<div id="panel">
+    <input id="expr" placeholder="Enter math equations:" />
+    <button onclick="addFormula()">Add</button>
 
     <div id="cursor"></div>
-</div>
-
-<div id="sidebar">
     <div id="list"></div>
 </div>
 

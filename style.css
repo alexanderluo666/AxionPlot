@@ -2,33 +2,43 @@ body {
     margin: 0;
     overflow: hidden;
     background: black;
-    font-family: monospace;
     color: #00ffcc;
-}
-
-#ui {
-position: absolute;
-top: 10px;
-left: 10px;
-width: 260px;
-padding: 10px;
-background: rgba(0,0,0,0.8);
-border: 1px solid #00ffcc33;
-}
-
-#sidebar {
-position: absolute;
-right: 10px;
-top: 10px;
-width: 220px;
-height: calc(100vh - 20px);
-overflow: auto;
-border: 1px solid #00ffcc33;
-padding: 10px;
-z-index: 9999;
-background: rgba(0,0,0,0.5)
+    font-family: monospace;
 }
 
 canvas {
     display: block;
+}
+
+#panel {
+position: absolute;
+top: 10px;
+left: 10px;
+width: 260px;
+background: rgba(0,0,0,0.5);
+padding: 10px;
+border: 1px solid #00ffcc33;
+backdrop-filter: blur(6px);
+}
+
+input {
+    width: 100%;
+    background: black;
+    color: #00ffcc;
+    border: 1px solid #00ffcc33;
+    padding: 5px;
+}
+
+button {
+    margin-top: 5px;
+    width: 100%;
+    background: black;
+    color: #00ffcc;
+    border: 1px solid #00ffcc33;
+}
+
+#list {
+margin-top: 10px;
+max-height: 300px;
+overflow-y: auto;
 }
