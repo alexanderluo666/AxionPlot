@@ -1,30 +1,29 @@
 body {
     margin: 0;
-    background: radial-gradient(circle at center, #050505, #000000);
+    background: radial-gradient(circle at center, #050505, black);
     color: #00ffcc;
     font-family: monospace;
     overflow: hidden;
 }
 
-/* HUD panel */
 #ui {
     position: absolute;
     top: 10px;
     left: 10px;
-    background: rgba(0,0,0,0.6);
-    border: 1px solid #00ffcc55;
     padding: 10px;
-    box-shadow: 0 0 20px #00ffcc33;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid #00ffcc44;
+    box-shadow: 0 0 15px #00ffcc22;
 }
 
-h1 {
+.title {
     font-size: 14px;
-    margin: 0 0 10px 0;
+    margin-bottom: 8px;
     letter-spacing: 2px;
 }
 
 input {
-    width: 260px;
+    width: 280px;
     padding: 8px;
     background: black;
     border: 1px solid #00ffcc55;
@@ -32,7 +31,7 @@ input {
 }
 
 button {
-    margin-top: 5px;
+    margin-top: 6px;
     padding: 6px 10px;
     background: black;
     border: 1px solid #00ffcc55;
@@ -44,14 +43,12 @@ button:hover {
     box-shadow: 0 0 10px #00ffcc55;
 }
 
-#coords {
+#cursor {
     margin-top: 10px;
     font-size: 12px;
-    opacity: 0.8;
 }
 
 canvas {
     display: block;
     margin: auto;
 }
-
