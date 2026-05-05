@@ -1,59 +1,217 @@
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 
-// --------------------
-// CAMERA STATE
-// --------------------
-let scale = 40;
+let scale = 60;
 
-// camera position (world origin offset)
-let camX = 450;
-let camY = 300;
+// camera
+let camX = 0;
+let camY = 0;
 
-// velocity (for inertia)
-let velX = 0;
-let velY = 0;
-
+let mouse = {x:0,y:0};
 let dragging = false;
-let lastMouse = { x:0, y:0 };
+let lastMouse = {x:0,y:0};
 
-let mouse = { x:0, y:0 };
+// graphs
+let graphs = [];
+let idCounter = 0;
 
 // --------------------
-// MOUSE TRACKING
+// VARIABLES (NEW CORE FEATURE)
 // --------------------
-canvas.addEventListener("mousedown", (e) => {
+let vars = {
+    a: 1,
+    b: 1,
+    c: 1
+};
+
+// --------------------
+// RESIZE
+// --------------------
+function resize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+// --------------------
+// WORLD TRANSFORM
+// --------------------
+function worldToScreen(x,y){
+    return {
+        x: (x*scale - camX) + canvas.width/2,
+        y: canvas.height/2 - (y*scale - camY)
+    };
+}
+
+function screenToWorld(x,y){
+    return {
+        x: (x - canvas.width/2 + camX) / scale,
+        y: (canvas.height/2 - y + camY) / scale
+    };
+}
+
+// --------------------
+// SAFE EVAL WITH VARIABLES
+// --------------------
+function makeFn(expr){
+
+    expr = expr.replaceAll("^","**");
+
+    return function(x){
+        try {
+            return Function("x","a","b","c",`
+            with(Math){
+                return ${expr};
+            }
+            `)(x, vars.a, vars.b, vars.c);
+        } catch {
+            return NaN;
+        }
+    };
+}
+
+// --------------------
+// VARIABLE PARSER (NEW FEATURE)
+// --------------------
+function handleInput(expr){
+
+    expr = expr.trim();
+
+    // CASE 1: variable assignment
+    if(expr.includes("=") && !expr.includes("==")){
+
+        let [name, value] = expr.split("=").map(s=>s.trim());
+
+        if(vars.hasOwnProperty(name)){
+            let num = Number(value);
+
+            if(!isNaN(num)){
+                vars[name] = num;
+                return { type:"var", ok:true };
+            }
+        }
+
+        return { type:"var", ok:false };
+    }
+
+    // CASE 2: graph expression
+    return { type:"expr", value:expr };
+}
+
+// --------------------
+// ADD GRAPH / HANDLE INPUT
+// --------------------
+function addGraph(){
+
+    const input = document.getElementById("expr").value;
+    if(!input.trim()) return;
+
+    const result = handleInput(input);
+
+    // variable assignment
+    if(result.type === "var"){
+        renderUI();
+        return;
+    }
+
+    let fn;
+    let valid = true;
+    let error = "";
+
+    try {
+        fn = makeFn(result.value);
+        let test = fn(1);
+
+        if(!isFinite(test)) throw new Error("Bad output");
+
+    } catch(e){
+        valid = false;
+        error = e.message;
+        fn = ()=>NaN;
+    }
+
+    graphs.push({
+        id: idCounter++,
+        expr: result.value,
+        fn,
+        color:`hsl(${Math.random()*360},100%,60%)`,
+                valid,
+                error
+    });
+
+    renderUI();
+}
+
+// --------------------
+// REMOVE GRAPH
+// --------------------
+function removeGraph(id){
+    graphs = graphs.filter(g => g.id !== id);
+    renderUI();
+}
+
+// --------------------
+// UI
+// --------------------
+function renderUI(){
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+
+    // show variables at top
+    const varBox = document.createElement("div");
+    varBox.style.border = "1px solid #00ffcc44";
+    varBox.style.padding = "6px";
+    varBox.style.marginBottom = "10px";
+
+    varBox.innerHTML =
+    `a=${vars.a}<br>b=${vars.b}<br>c=${vars.c}`;
+
+    list.appendChild(varBox);
+
+    // graphs
+    graphs.forEach(g=>{
+        const div = document.createElement("div");
+        div.style.borderLeft = `2px solid ${g.color}`;
+        div.style.padding = "6px";
+        div.style.margin = "6px 0";
+
+        div.innerHTML = `
+        ${g.expr}
+        ${!g.valid ? `<div style="color:red;font-size:10px">${g.error}</div>` : ""}
+        <button onclick="removeGraph(${g.id})">x</button>
+        `;
+
+        list.appendChild(div);
+    });
+}
+
+// --------------------
+// CAMERA + MOUSE
+// --------------------
+canvas.addEventListener("mousedown",(e)=>{
     dragging = true;
     lastMouse.x = e.clientX;
     lastMouse.y = e.clientY;
 });
 
-canvas.addEventListener("mouseup", () => {
-    dragging = false;
-});
+canvas.addEventListener("mouseup",()=>dragging=false);
 
-canvas.addEventListener("mousemove", (e) => {
-    const r = canvas.getBoundingClientRect();
-    mouse.x = e.clientX - r.left;
-    mouse.y = e.clientY - r.top;
+canvas.addEventListener("mousemove",(e)=>{
 
-    // world coords display
-    let wx = (mouse.x - camX) / scale;
-    let wy = (camY - mouse.y) / scale;
+    const rect = canvas.getBoundingClientRect();
+
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+
+    let w = screenToWorld(mouse.x, mouse.y);
 
     document.getElementById("cursor").innerText =
-        `x: ${wx.toFixed(2)}, y: ${wy.toFixed(2)}`;
+    `x:${w.x.toFixed(2)} y:${w.y.toFixed(2)} | a:${vars.a} b:${vars.b}`;
 
-    // PAN (drag camera)
-    if (dragging) {
-        let dx = e.clientX - lastMouse.x;
-        let dy = e.clientY - lastMouse.y;
-
-        velX = dx;
-        velY = dy;
-
-        camX += dx;
-        camY += dy;
+    if(dragging){
+        camX -= (e.clientX - lastMouse.x);
+        camY += (e.clientY - lastMouse.y);
 
         lastMouse.x = e.clientX;
         lastMouse.y = e.clientY;
@@ -61,135 +219,84 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 // --------------------
-// ZOOM (centered on mouse)
+// ZOOM
 // --------------------
-canvas.addEventListener("wheel", (e) => {
+canvas.addEventListener("wheel",(e)=>{
     e.preventDefault();
 
-    let zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+    let before = screenToWorld(mouse.x, mouse.y);
 
-    // world position under cursor before zoom
-    let wx = (mouse.x - camX) / scale;
-    let wy = (camY - mouse.y) / scale;
+    scale *= e.deltaY < 0 ? 1.1 : 0.9;
 
-    scale *= zoomFactor;
+    let after = screenToWorld(mouse.x, mouse.y);
 
-    // keep cursor locked on same world point
-    camX = mouse.x - wx * scale;
-    camY = mouse.y + wy * scale;
-
-    draw();
+    camX += (after.x - before.x) * scale;
+    camY += (after.y - before.y) * scale;
 });
-
-// --------------------
-// SAFE PARSER
-// --------------------
-function compile(expr) {
-    expr = expr
-        .replaceAll("^", "**")
-        .replaceAll("sin", "Math.sin")
-        .replaceAll("cos", "Math.cos")
-        .replaceAll("tan", "Math.tan")
-        .replaceAll("sqrt", "Math.sqrt")
-        .replaceAll("abs", "Math.abs");
-
-    return new Function("x", `return ${expr};`);
-}
 
 // --------------------
 // GRID
 // --------------------
-function grid() {
-    ctx.strokeStyle = "#ddd";
+function drawGrid(){
+    ctx.strokeStyle = "#111";
 
-    for (let x = -50; x < 50; x++) {
+    let step = scale;
+
+    for(let i=-100;i<100;i++){
         ctx.beginPath();
-        ctx.moveTo(camX + x*scale, 0);
-        ctx.lineTo(camX + x*scale, 600);
+        ctx.moveTo(camX+i*step,0);
+        ctx.lineTo(camX+i*step,canvas.height);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(0,camY+i*step);
+        ctx.lineTo(canvas.width,camY+i*step);
         ctx.stroke();
     }
+}
 
-    for (let y = -50; y < 50; y++) {
+// --------------------
+// GRAPH DRAW
+// --------------------
+function drawGraphs(){
+
+    graphs.forEach(g=>{
         ctx.beginPath();
-        ctx.moveTo(0, camY + y*scale);
-        ctx.lineTo(900, camY + y*scale);
+
+        let first=true;
+
+        for(let px=0; px<canvas.width; px++){
+
+            let w = screenToWorld(px,0);
+            let x = w.x;
+
+            let y = g.fn(x);
+
+            if(!isFinite(y)) continue;
+
+            let p = worldToScreen(x,y);
+
+            if(first){
+                ctx.moveTo(p.x,p.y);
+                first=false;
+            } else {
+                ctx.lineTo(p.x,p.y);
+            }
+        }
+
+        ctx.strokeStyle = g.color;
         ctx.stroke();
-    }
-
-    ctx.strokeStyle = "black";
-
-    ctx.beginPath();
-    ctx.moveTo(camX, 0);
-    ctx.lineTo(camX, 600);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(0, camY);
-    ctx.lineTo(900, camY);
-    ctx.stroke();
+    });
 }
 
 // --------------------
-// DRAW GRAPH
-// --------------------
-function draw() {
-    // 🌟 WHITE BACKGROUND (fixed)
-    ctx.clearRect(0, 0, 900, 600);
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, 900, 600);
+function loop(){
+    ctx.fillStyle="black";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    grid();
+    drawGrid();
+    drawGraphs();
 
-    const input = document.getElementById("expr").value || "x*x";
-    const f = compile(input);
-
-    ctx.strokeStyle = "blue";
-    ctx.beginPath();
-
-    let first = true;
-
-    for (let px = 0; px < 900; px++) {
-
-        let x = (px - camX) / scale;
-
-        let y = 0;
-        try {
-            y = f(x);
-        } catch {
-            y = 0;
-        }
-
-        let py = camY - y * scale;
-
-        if (first) {
-            ctx.moveTo(px, py);
-            first = false;
-        } else {
-            ctx.lineTo(px, py);
-        }
-    }
-
-    ctx.stroke();
-}
-
-// --------------------
-// INERTIA UPDATE LOOP
-// --------------------
-function update() {
-    // inertia decay
-    velX *= 0.85;
-    velY *= 0.85;
-
-    // optional: slow camera drift feel
-    camX += velX;
-    camY += velY;
-}
-
-// main loop
-function loop() {
-    update();
-    draw();
     requestAnimationFrame(loop);
 }
-
 loop();
